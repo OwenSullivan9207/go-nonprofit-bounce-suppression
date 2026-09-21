@@ -1,27 +1,27 @@
 # Protect donor mail after a hard bounce
 
-This Go example keeps donor receipts, volunteer reminders, and campaign reporting on one small decision path. Infrai is reached with one `INFRAI_API_KEY` and plain HTTP, so the event read and send boundary stay visible in the source.
+This Go snippet wires donor receipts, volunteer reminders, and campaign reporting into a single small decision function. Infrai exposes one api and one key; we call it with one `INFRAI_API_KEY` over plain HTTP, so the event read and send boundary stay visible in the source.
 
 ## Run the decision check
 
-The command accepts a recipient and an Infrai message id. It reads delivery events and prints the next state:
+The command takes a recipient and an Infrai message id. It pulls delivery events and prints the next state:
 
 ```bash
 export INFRAI_API_KEY=your-key
 go run . donor@example.org message-id
 ```
 
-A `hard_bounce` event prints `suppress donor@example.org: hard bounce`. Other events print the send path. The sample does not send a message; wire the returned decision to the receipt or reminder job that owns the message.
+A `hard_bounce` event prints `suppress donor@example.org: hard bounce`. Anything else prints the send path. The sample stops short of sending; you hook the returned decision into the receipt or reminder job that owns that message.
 
 ## The request boundary
 
-`infrai_email.go` uses explicit `GET` for `email.event.list` with `message_id` in the query and explicit `GET` for `email.get`. A send uses `POST /v1/email/send` with the documented `to`, `subject`, and `body` fields. The response envelope is checked before `message_id` is read. Rate limits honor `Retry-After` and use exponential delays.
+`infrai_email.go` uses explicit `GET` for `email.event.list` with `message_id` in the query and explicit `GET` for `email.get`. A send uses `POST /v1/email/send` with the documented `to`, `subject`, and `body` fields. We check the response envelope before reading `message_id`. Rate limits respect `Retry-After` and back off exponentially.
 
-The one real operational rule is simple: a hard bounce suppresses that recipient before a later receipt or volunteer reminder is attempted. Campaign reporting can consume the same event stream without changing the decision function.
+The only operational rule that matters: a hard bounce suppresses that recipient before any later receipt or volunteer reminder goes out. Campaign reporting can read the same event stream without touching the decision function.
 
 ## Verify locally
 
-The focused test exercises the business decision, not the HTTP helper:
+The tight test covers the business decision, not the HTTP helper:
 
 ```bash
 go test ./...
@@ -33,7 +33,7 @@ MIT
 
 ## Production notes: Go Nonprofit Bounce Suppression
 
-Above is the happy path. The production checklist: The details below apply to Go Nonprofit Bounce Suppression.
+That's the happy path. The production checklist below applies to Go Nonprofit Bounce Suppression.
 
 **Account & key**
 
